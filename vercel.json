@@ -1,6 +1,8 @@
 {
   "framework": "nextjs",
-  "buildCommand": "npx next build --webpack"
+  "buildCommand": "next build"
 }
+
+
 
 
