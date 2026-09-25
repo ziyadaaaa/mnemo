@@ -1,3 +1,6 @@
 {
-  "buildCommand": "echo 'Skipping build'"
+  "framework": "nextjs",
+  "buildCommand": "npx next build --webpack"
 }
+
+
