@@ -1,16 +1,46 @@
-  ▲ Next.js 14.2.5
+  ▲ Next.js 14.2.0
   - Environments: .env.local
 
    Creating an optimized production build ...
 Failed to compile.
 
-./src/app/api/checkout/route.ts
-Module not found: Can't resolve 'stripe'
+src/app/layout.tsx
+An error occurred in `next/font`.
+
+Error: Cannot find module 'autoprefixer'
+Require stack:
+- /workspaces/mnemo/node_modules/next/dist/build/webpack/config/blocks/css/plugins.js
+- /workspaces/mnemo/node_modules/next/dist/build/webpack/config/blocks/css/index.js
+- /workspaces/mnemo/node_modules/next/dist/build/webpack/config/index.js
+- /workspaces/mnemo/node_modules/next/dist/build/webpack-config.js
+- /workspaces/mnemo/node_modules/next/dist/build/webpack-build/impl.js
+- /workspaces/mnemo/node_modules/next/dist/compiled/jest-worker/processChild.js
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1564:15)
+    at /workspaces/mnemo/node_modules/next/dist/server/require-hook.js:55:36
+    at wrapResolveFilename (node:internal/modules/cjs/loader:1118:27)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1169:12)
+    at require.resolve (node:internal/modules/helpers:175:31)
+    at loadPlugin (/workspaces/mnemo/node_modules/next/dist/build/webpack/config/blocks/css/plugins.js:49:32)
+    at /workspaces/mnemo/node_modules/next/dist/build/webpack/config/blocks/css/plugins.js:157:56
+    at Array.map (<anonymous>)
+    at getPostCssPlugins (/workspaces/mnemo/node_modules/next/dist/build/webpack/config/blocks/css/plugins.js:157:47)
+    at async /workspaces/mnemo/node_modules/next/dist/build/webpack/config/blocks/css/index.js:124:36
+
+./src/lib/supabase/client.ts
+Module not found: Can't resolve '@supabase/ssr'
 
 https://nextjs.org/docs/messages/module-not-found
 
-./src/app/api/webhooks/stripe/route.ts
-Module not found: Can't resolve 'stripe'
+Import trace for requested module:
+./src/app/dashboard/page.tsx
+
+./src/app/api/ask/route.ts
+Module not found: Can't resolve 'openai'
+
+https://nextjs.org/docs/messages/module-not-found
+
+./src/app/api/ingest/route.ts
+Module not found: Can't resolve 'openai'
 
 https://nextjs.org/docs/messages/module-not-found
 
