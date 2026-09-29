@@ -1,11 +1,19 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY)
+  : null;
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
 export async function POST(req: Request) {
+    if (!stripe) {
+    return NextResponse.json(
+      { error: 'Stripe is not configured.' },
+      { status: 503 }
+    );
+  }
   const body = await req.text();
   const signature = req.headers.get('stripe-signature')!;
 
