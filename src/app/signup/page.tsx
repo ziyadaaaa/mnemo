@@ -4,6 +4,11 @@ import React, { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
 export default function SignupPage() {
+  const plan =
+    typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('plan')
+      : null;
+
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -45,8 +50,16 @@ export default function SignupPage() {
       }
 
       if (data.session) {
-        window.location.href = '/onboarding/workspace';
+        const destination = plan
+          ? `/onboarding/workspace?plan=${encodeURIComponent(plan)}`
+          : '/onboarding/workspace';
+
+        window.location.href = destination;
         return;
+      }
+
+      if (plan) {
+        localStorage.setItem('mnemo_selected_plan', plan);
       }
 
       setMessage(
@@ -61,138 +74,128 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-[#e5e5e0] font-sans flex items-center justify-center p-6">
+    <main className="min-h-screen bg-black text-white flex items-center justify-center px-6">
       <div className="w-full max-w-md">
-
-        <div className="mb-8">
+        <div className="mb-8 text-center">
           <a
             href="/"
-            className="font-serif text-2xl text-white tracking-tight"
+            className="text-2xl font-semibold tracking-tight"
           >
             Mnemo
           </a>
+
+          <h1 className="mt-8 text-2xl font-semibold tracking-tight">
+            Create your account
+          </h1>
+
+          <p className="mt-2 text-sm text-white/45">
+            Give your company a memory.
+          </p>
+
+          {plan === 'business' && (
+            <div className="mt-5 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-left">
+              <p className="text-xs font-medium text-white/80">
+                Business plan selected
+              </p>
+              <p className="mt-1 text-xs text-white/40">
+                $99/month after checkout.
+              </p>
+            </div>
+          )}
         </div>
 
-        <div className="bg-neutral-950 border border-neutral-900 rounded-xl p-8">
-
-          <div className="space-y-2 mb-8">
-            <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-500">
-              Get started
-            </span>
-
-            <h1 className="font-serif text-3xl text-white">
-              Create your account.
-            </h1>
-
-            <p className="text-sm text-neutral-400">
-              Give your company a memory that stays with the team.
-            </p>
-          </div>
-
-          <form onSubmit={handleSignup} className="space-y-5">
-
-            <div className="space-y-2">
-              <label
-                htmlFor="fullName"
-                className="text-[10px] font-mono uppercase tracking-widest text-neutral-400"
-              >
-                Full name
-              </label>
-
-              <input
-                id="fullName"
-                type="text"
-                required
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Your name"
-                disabled={loading}
-                className="w-full bg-neutral-900 border border-neutral-800 rounded px-3 py-3 text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:border-neutral-600 disabled:opacity-50"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label
-                htmlFor="email"
-                className="text-[10px] font-mono uppercase tracking-widest text-neutral-400"
-              >
-                Email
-              </label>
-
-              <input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@company.com"
-                disabled={loading}
-                className="w-full bg-neutral-900 border border-neutral-800 rounded px-3 py-3 text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:border-neutral-600 disabled:opacity-50"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label
-                htmlFor="password"
-                className="text-[10px] font-mono uppercase tracking-widest text-neutral-400"
-              >
-                Password
-              </label>
-
-              <input
-                id="password"
-                type="password"
-                required
-                minLength={6}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="At least 6 characters"
-                disabled={loading}
-                className="w-full bg-neutral-900 border border-neutral-800 rounded px-3 py-3 text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:border-neutral-600 disabled:opacity-50"
-              />
-            </div>
-
-            {error && (
-              <div className="border border-red-900/50 bg-red-950/20 rounded px-3 py-3 text-sm text-red-300">
-                {error}
-              </div>
-            )}
-
-            {message && (
-              <div className="border border-neutral-800 bg-neutral-900 rounded px-3 py-3 text-sm text-neutral-300">
-                {message}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-[#f5f5f0] text-neutral-950 font-mono text-xs uppercase tracking-wider rounded hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        <form onSubmit={handleSignup} className="space-y-4">
+          <div>
+            <label
+              htmlFor="fullName"
+              className="mb-2 block text-xs font-medium text-white/60"
             >
-              {loading ? 'Creating account...' : 'Create account'}
-            </button>
+              Full name
+            </label>
 
-          </form>
-
-          <div className="mt-6 pt-6 border-t border-neutral-900 text-center">
-            <p className="text-xs text-neutral-500">
-              Already have an account?{' '}
-              <a
-                href="/signin"
-                className="text-neutral-300 hover:text-white transition-colors"
-              >
-                Sign in
-              </a>
-            </p>
+            <input
+              id="fullName"
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="Your name"
+              required
+              className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-white/20"
+            />
           </div>
 
-        </div>
+          <div>
+            <label
+              htmlFor="email"
+              className="mb-2 block text-xs font-medium text-white/60"
+            >
+              Email
+            </label>
 
-        <p className="mt-6 text-center text-[10px] text-neutral-600">
-          By creating an account, you agree to Mnemo&apos;s terms and privacy policy.
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@company.com"
+              required
+              autoComplete="email"
+              className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-white/20"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="password"
+              className="mb-2 block text-xs font-medium text-white/60"
+            >
+              Password
+            </label>
+
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="At least 6 characters"
+              required
+              minLength={6}
+              autoComplete="new-password"
+              className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-white/20"
+            />
+          </div>
+
+          {error && (
+            <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs text-red-300">
+              {error}
+            </div>
+          )}
+
+          {message && (
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-xs text-emerald-300">
+              {message}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-xl bg-white py-3 text-sm font-medium text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {loading ? 'Creating account...' : 'Create account'}
+          </button>
+        </form>
+
+        <p className="mt-6 text-center text-xs text-white/35">
+          Already have an account?{' '}
+          <a
+            href="/signin"
+            className="text-white/70 transition hover:text-white"
+          >
+            Sign in
+          </a>
         </p>
-
       </div>
-    </div>
+    </main>
   );
 }

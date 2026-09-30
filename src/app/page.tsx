@@ -827,12 +827,18 @@ export default function LandingPage() {
                 </p>
               </div>
 
-              <Link
-                href="/signup"
-                className="w-full text-center bg-white text-black text-xs font-medium py-2.5 rounded-md hover:bg-neutral-200 transition-colors"
-              >
-                {plan.btn}
-              </Link>
+             <Link
+  href={
+    plan.name === 'Business'
+      ? '/signup?plan=business'
+      : plan.name === 'Enterprise'
+        ? '/signup?plan=enterprise'
+        : '/signup'
+  }
+  className="w-full text-center bg-white text-black text-xs font-medium py-2.5 rounded-md hover:bg-neutral-200 transition-colors"
+>
+  {plan.btn}
+</Link>
             </div>
 
           ))}

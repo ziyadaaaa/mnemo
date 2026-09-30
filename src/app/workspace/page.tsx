@@ -155,6 +155,12 @@ export default function WorkspacePage() {
   const [memories, setMemories] = useState<MemoryItem[]>([]);
   const [loadingMemories, setLoadingMemories] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+   const [billing, setBilling] = useState<{
+  status: string;
+  priceId: string | null;
+  currentPeriodEnd: string | null;
+  hasSubscription: boolean;
+} | null>(null); 
 
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
@@ -276,6 +282,16 @@ const [uploadCategory, setUploadCategory] = useState('General');
             : [];
 
       setMemories(items.map(normalizeMemory));
+     const billingResponse = await fetch('/api/billing/status', {
+  method: 'GET',
+  credentials: 'include',
+  cache: 'no-store',
+});
+
+if (billingResponse.ok) {
+  const billingData = await billingResponse.json();
+  setBilling(billingData.subscription);
+}
     } catch (error) {
       const message =
         error instanceof Error
@@ -1255,17 +1271,67 @@ formData.append('category', uploadCategory);
                     icon={<Upload className="h-5 w-5" />}
                   />
 
-                  <ConnectionCard
-                    title="Google Drive"
-                    description="Connect company documents from Google Drive."
-                    icon={<Database className="h-5 w-5" />}
-                    onClick={() =>
-                      showNotification(
-                        'Google Drive connection is not connected yet.',
-                        'info'
-                      )
-                    }
-                  />
+                 <ConnectionCard
+  title="Google Drive"
+  description="Connect company documents from Google Drive."
+  icon={<Database className="h-5 w-5" />}
+  onClick={async () => {
+    try {
+      const statusResponse = await fetch(
+        '/api/integrations/google/status',
+        {
+          method: 'GET',
+          credentials: 'include',
+          cache: 'no-store',
+        }
+      );
+
+      const statusData =
+        await statusResponse.json();
+
+      if (!statusData.connected) {
+        window.location.href =
+          '/api/auth/google';
+        return;
+      }
+
+      showNotification(
+        'Google Drive is connected. Starting sync...',
+        'info'
+      );
+
+      const syncResponse = await fetch(
+        '/api/integrations/google/sync',
+        {
+          method: 'POST',
+          credentials: 'include',
+        }
+      );
+
+      const syncData =
+        await syncResponse.json();
+
+      if (!syncResponse.ok) {
+        showNotification(
+          syncData.error ||
+            'Google Drive sync failed.',
+          'error'
+        );
+        return;
+      }
+
+      showNotification(
+        `Google Drive sync complete: ${syncData.imported} imported, ${syncData.skipped} skipped, ${syncData.failed} failed.`,
+        'success'
+      );
+    } catch {
+      showNotification(
+        'Could not sync Google Drive.',
+        'error'
+      );
+    }
+  }}
+/>
 
                   <ConnectionCard
                     title="Slack"
@@ -1336,6 +1402,28 @@ formData.append('category', uploadCategory);
                     description="Number of knowledge records currently available."
                     value={String(memories.length)}
                   />
+                  <SettingsRow
+  title="Subscription"
+  description="Current Stripe subscription for this workspace."
+  value={
+    billing?.hasSubscription
+      ? billing.status === 'active'
+        ? 'Business · Active'
+        : `Business · ${billing.status}`
+      : 'No active subscription'
+  }
+  positive={billing?.status === 'active'}
+/>
+
+{billing?.currentPeriodEnd && (
+  <SettingsRow
+    title="Renewal date"
+    description="Your current subscription period ends on this date."
+    value={new Date(
+      billing.currentPeriodEnd
+    ).toLocaleDateString()}
+  />
+)}
                 </div>
               </section>
             )}
