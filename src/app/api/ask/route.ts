@@ -1,95 +1,186 @@
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { createClient } from '@supabase/supabase-js';
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+const NORTHSTAR_WORKSPACE_ID =
+  'df2de66f-5d94-4b0e-b758-dba8e91f0186';
 
 export async function POST(req: Request) {
   try {
-    const { prompt } = await req.json();
-
-    if (!prompt) {
-      return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
-    }
-
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: 'Missing OpenAI API key.' }, { status: 500 });
-    }
-
-    const openai = new OpenAI({ apiKey });
-
-    // Built-in verified seed memory mapping for instant demo questions
-    const presetKnowledgeMap: Record<string, { answer: string; sources: any[] }> = {
-      "What is Northstar's current Q3 strategy?": {
-        answer: "Northstar's current strategy prioritizes enterprise expansion, Atlas reliability, and moving analytics workloads away from the production database to protect latency. [1]",
-        sources: [
-          {
-            id: 1,
-            title: 'Q3 Leadership Summary',
-            type: 'PDF',
-            date: 'Aug 20, 2026',
-            exactPassage: 'Northstar\'s current strategy prioritizes enterprise expansion, Atlas reliability, and moving analytics workloads away from the production database.'
-          }
-        ]
-      },
-      "What are the deployment rules for production?": {
-        answer: "All production releases must pass strict staging integration testing, and zero-downtime rolling upgrades are mandatory for all core backend services. [1]",
-        sources: [
-          {
-            id: 1,
-            title: 'Deployment Standard Operating Procedure',
-            type: 'DOCX',
-            date: 'Jun 28, 2026',
-            exactPassage: 'All releases must pass staging integration testing. Zero-downtime rolling upgrades are mandatory for core backend services.'
-          }
-        ]
-      },
-      "Where should analytics workloads run?": {
-        answer: "Analytics workloads must be decoupled and run outside the primary transactional clusters to prevent query latency spikes on production databases. [1]",
-        sources: [
-          {
-            id: 1,
-            title: 'Leadership Meeting Notes — August 20',
-            type: 'TXT',
-            date: 'Aug 20, 2026',
-            exactPassage: 'Agreed to decouple analytical reporting queries from primary transactional clusters to protect latency metrics.'
-          }
-        ]
-      }
-    };
-
-    // If it matches a built-in demo question, return the exact verified answer & citations
-    if (presetKnowledgeMap[prompt]) {
-      return NextResponse.json(presetKnowledgeMap[prompt], { status: 200 });
-    }
-
-    // For any custom user query, use GPT-4o-mini with live web context synthesis
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json(
         {
-          role: 'system',
-          content: 'You are Mnemo AI. Answer the user question accurately. Provide a professional corporate response and cite general industry knowledge or web sources using [1] notation when applicable.'
+          error:
+            'OpenAI is not configured. Add OPENAI_API_KEY to the server environment.',
         },
-        { role: 'user', content: prompt }
-      ],
-      temperature: 0.2,
+        { status: 500 }
+      );
+    }
+
+    const body = await req.json();
+
+    const query =
+      typeof body.query === 'string'
+        ? body.query.trim()
+        : '';
+
+    const workspaceId =
+      typeof body.workspaceId === 'string' &&
+      body.workspaceId.trim()
+        ? body.workspaceId
+        : NORTHSTAR_WORKSPACE_ID;
+
+    if (!query) {
+      return NextResponse.json(
+        {
+          error: 'Query is required.',
+        },
+        { status: 400 }
+      );
+    }
+
+    const embeddingResponse =
+      await openai.embeddings.create({
+        model: 'text-embedding-3-small',
+        input: query,
+      });
+
+    const queryEmbedding =
+      embeddingResponse.data[0]?.embedding;
+
+    if (!queryEmbedding) {
+      throw new Error(
+        'Could not create an embedding for the question.'
+      );
+    }
+
+    const { data: matches, error: matchError } =
+      await supabase.rpc(
+        'match_document_chunks',
+        {
+          query_embedding: queryEmbedding,
+          match_threshold: 0.25,
+          match_count: 8,
+          workspace_filter: workspaceId,
+        }
+      );
+
+    if (matchError) {
+      console.error(
+        'Vector search error:',
+        matchError
+      );
+
+      return NextResponse.json(
+        {
+          error:
+            `Knowledge search failed: ${matchError.message}`,
+        },
+        { status: 500 }
+      );
+    }
+
+    const contextChunks = matches || [];
+
+    const contextText = contextChunks
+      .map(
+        (match: any) =>
+          `Source: ${match.title || 'Untitled document'}\n` +
+          `Category: ${match.category || 'General'}\n` +
+          `Content:\n${match.content || ''}`
+      )
+      .join('\n\n---\n\n');
+
+    const systemPrompt = `
+You are Mnemo, an AI business-memory assistant.
+
+Your job is to answer questions using the company's stored knowledge.
+
+IMPORTANT RULES:
+1. Use ONLY the company knowledge provided in the context below.
+2. Do not invent company facts.
+3. If the answer is not supported by the context, say clearly that you could not find enough information in the company's memory.
+4. When useful, mention the source document name.
+5. Give a direct, useful answer rather than dumping the entire context.
+6. Treat the provided company documents as the source of truth for this workspace.
+
+COMPANY KNOWLEDGE:
+${contextText || 'No matching company knowledge was found.'}
+`;
+
+    const completion =
+      await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt,
+          },
+          {
+            role: 'user',
+            content: query,
+          },
+        ],
+        temperature: 0.1,
+      });
+
+    const answer =
+      completion.choices[0]?.message?.content ||
+      'I could not generate an answer from the available company memory.';
+
+    const citations = contextChunks.map(
+      (match: any) => ({
+        id:
+          match.id ||
+          Math.random().toString(),
+        title:
+          match.title ||
+          'Untitled Source',
+        type:
+          match.category ||
+          'Document',
+        source:
+          match.source_type ||
+          'Company Memory',
+        snippet:
+          match.content
+            ? match.content.length > 180
+              ? `${match.content.substring(0, 180)}...`
+              : match.content
+            : '',
+        similarity:
+          typeof match.similarity === 'number'
+            ? match.similarity
+            : null,
+      })
+    );
+
+    return NextResponse.json({
+      answer,
+      citations,
     });
+  } catch (error: any) {
+    console.error(
+      'Ask API error:',
+      error
+    );
 
-    const answer = completion.choices[0].message.content || 'No response generated.';
-    const sources = [
+    return NextResponse.json(
       {
-        id: 1,
-        title: 'Live Web Knowledge Base',
-        type: 'WEB',
-        date: 'Sep 2026',
-        exactPassage: answer.slice(0, 140) + '...'
-      }
-    ];
-
-    return NextResponse.json({ answer, sources }, { status: 200 });
-  } catch (err: any) {
-    console.error('Ask API error:', err);
-    return NextResponse.json({ error: err.message || 'Internal Server Error' }, { status: 500 });
+        error:
+          error?.message ||
+          'Internal server error.',
+      },
+      { status: 500 }
+    );
   }
 }

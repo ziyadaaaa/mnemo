@@ -3,8 +3,24 @@ import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 
-export async function GET() {
+export async function DELETE(
+  request: Request,
+  context: {
+    params: Promise<{ id: string }>;
+  }
+) {
   try {
+    const { id } = await context.params;
+
+    if (!id) {
+      return NextResponse.json(
+        {
+          error: 'Memory ID is required.',
+        },
+        { status: 400 }
+      );
+    }
+
     const cookieStore = await cookies();
 
     // Get the currently signed-in Supabase user.
@@ -45,15 +61,13 @@ export async function GET() {
       );
     }
 
-    // Use the service-role client only on the server.
+    // Server-only admin client.
     const admin = createAdminClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // Resolve the workspace from the authenticated user's
-    // membership instead of trusting a workspaceId supplied
-    // by the browser.
+    // Resolve the workspace belonging to the signed-in user.
     const { data: membership, error: membershipError } =
       await admin
         .from('workspace_members')
@@ -64,7 +78,7 @@ export async function GET() {
 
     if (membershipError) {
       console.error(
-        'MEMORY WORKSPACE MEMBERSHIP ERROR:',
+        'DELETE MEMORY MEMBERSHIP ERROR:',
         membershipError
       );
 
@@ -90,42 +104,52 @@ export async function GET() {
 
     const workspaceId = membership.workspace_id;
 
-    // Only retrieve memories belonging to the authenticated
-    // user's actual workspace.
-    const { data, error } = await admin
-      .from('memories')
-      .select('*')
-      .eq('workspace_id', workspaceId)
-      .order('created_at', { ascending: false });
+    // Delete ONLY if the memory belongs to the user's workspace.
+    const { data: deletedMemory, error: deleteError } =
+      await admin
+        .from('memories')
+        .delete()
+        .eq('id', id)
+        .eq('workspace_id', workspaceId)
+        .select('id, title')
+        .maybeSingle();
 
-    if (error) {
+    if (deleteError) {
       console.error(
-        'MEMORIES QUERY ERROR:',
-        error
+        'DELETE MEMORY ERROR:',
+        deleteError
       );
 
       return NextResponse.json(
         {
-          error: error.message,
-          code: error.code,
-          details: error.details,
-          hint: error.hint,
+          error: deleteError.message,
+          code: deleteError.code,
+          details: deleteError.details,
+          hint: deleteError.hint,
         },
         { status: 500 }
+      );
+    }
+
+    if (!deletedMemory) {
+      return NextResponse.json(
+        {
+          error: 'Memory not found in your workspace.',
+        },
+        { status: 404 }
       );
     }
 
     return NextResponse.json(
       {
         success: true,
-        workspaceId,
-        data: data ?? [],
+        deleted: deletedMemory,
       },
       { status: 200 }
     );
   } catch (error) {
     console.error(
-      'MEMORIES API ERROR:',
+      'DELETE MEMORY API ERROR:',
       error
     );
 

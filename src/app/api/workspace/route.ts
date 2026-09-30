@@ -7,7 +7,7 @@ export async function GET() {
   try {
     const cookieStore = await cookies();
 
-    // Get the currently signed-in Supabase user.
+    // Read the currently signed-in Supabase user.
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -18,10 +18,8 @@ export async function GET() {
           },
           setAll(cookiesToSet) {
             try {
-              cookiesToSet.forEach(
-                ({ name, value, options }) => {
-                  cookieStore.set(name, value, options);
-                }
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
               );
             } catch {
               // Ignore cookie update errors in this server context.
@@ -45,26 +43,23 @@ export async function GET() {
       );
     }
 
-    // Use the service-role client only on the server.
+    // Use the service role only on the server to securely
+    // resolve the user's workspace membership.
     const admin = createAdminClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // Resolve the workspace from the authenticated user's
-    // membership instead of trusting a workspaceId supplied
-    // by the browser.
-    const { data: membership, error: membershipError } =
-      await admin
-        .from('workspace_members')
-        .select('workspace_id, role')
-        .eq('user_id', user.id)
-        .limit(1)
-        .maybeSingle();
+    const { data: membership, error: membershipError } = await admin
+      .from('workspace_members')
+      .select('workspace_id, role')
+      .eq('user_id', user.id)
+      .limit(1)
+      .maybeSingle();
 
     if (membershipError) {
       console.error(
-        'MEMORY WORKSPACE MEMBERSHIP ERROR:',
+        'WORKSPACE MEMBERSHIP ERROR:',
         membershipError
       );
 
@@ -88,53 +83,53 @@ export async function GET() {
       );
     }
 
-    const workspaceId = membership.workspace_id;
+    // Fetch the actual workspace.
+    const { data: workspace, error: workspaceError } = await admin
+      .from('workspaces')
+      .select('id, name, created_at')
+      .eq('id', membership.workspace_id)
+      .single();
 
-    // Only retrieve memories belonging to the authenticated
-    // user's actual workspace.
-    const { data, error } = await admin
-      .from('memories')
-      .select('*')
-      .eq('workspace_id', workspaceId)
-      .order('created_at', { ascending: false });
-
-    if (error) {
+    if (workspaceError || !workspace) {
       console.error(
-        'MEMORIES QUERY ERROR:',
-        error
+        'WORKSPACE LOOKUP ERROR:',
+        workspaceError
       );
 
       return NextResponse.json(
         {
-          error: error.message,
-          code: error.code,
-          details: error.details,
-          hint: error.hint,
+          error:
+            workspaceError?.message ||
+            'Workspace could not be found.',
+          code: workspaceError?.code ?? null,
+          details: workspaceError?.details ?? null,
+          hint: workspaceError?.hint ?? null,
         },
         { status: 500 }
       );
     }
 
-    return NextResponse.json(
-      {
-        success: true,
-        workspaceId,
-        data: data ?? [],
+    return NextResponse.json({
+      user: {
+        id: user.id,
+        email: user.email ?? null,
       },
-      { status: 200 }
-    );
+      workspace: {
+        id: workspace.id,
+        name: workspace.name,
+        createdAt: workspace.created_at,
+      },
+      role: membership.role,
+    });
   } catch (error) {
-    console.error(
-      'MEMORIES API ERROR:',
-      error
-    );
+    console.error('WORKSPACE API ERROR:', error);
 
     return NextResponse.json(
       {
         error:
           error instanceof Error
             ? error.message
-            : 'Internal Server Error',
+            : 'Something went wrong.',
       },
       { status: 500 }
     );
