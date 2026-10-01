@@ -17,6 +17,7 @@ export type ExtractedMemory = {
   content: string;
   confidence: number;
   occurred_at: string | null;
+  relationship_type?: string | null;
 
   metadata: {
     people: string[];
@@ -73,7 +74,21 @@ Something that changed from one state to another.
 Important observations or context that do not fit the other categories.
 
 6. relationships
-An explicit relationship between people, teams, projects, customers, products, or other entities.
+
+An explicit relationship between people, teams, projects, customers, products, decisions, events, or other entities.
+
+For relationship memories:
+- Only extract relationships explicitly supported by the document.
+- Describe what is connected to what.
+- Use relationship_type to describe the relationship briefly, such as:
+  "caused_by"
+  "involves"
+  "affects"
+  "owned_by"
+  "depends_on"
+  "replaces"
+  "related_to"
+- Do not infer relationships that are not explicitly supported.
 
 For changes, capture previous_value and new_value when the document provides them.
 
@@ -94,11 +109,12 @@ Return JSON in exactly this shape:
   "memories": [
     {
       "memory_type": "knowledge",
-      "title": "string",
-      "content": "string",
-      "confidence": 0.95,
-      "occurred_at": null,
-      "metadata": {
+"title": "string",
+"content": "string",
+"confidence": 0.95,
+"occurred_at": null,
+"relationship_type": null,
+"metadata": {
         "people": [],
         "teams": [],
         "projects": [],
@@ -215,11 +231,15 @@ ${content}
         0,
         Math.min(1, Number(memory.confidence) || 0)
       ),
-     occurred_at: normalizeOccurredAt(
+    occurred_at: normalizeOccurredAt(
   memory.occurred_at,
   content
 ),
-      metadata: {
+relationship_type:
+  typeof memory.relationship_type === 'string'
+    ? memory.relationship_type.trim() || null
+    : null,
+metadata: {
         people: memory.metadata?.people || [],
         teams: memory.metadata?.teams || [],
         projects: memory.metadata?.projects || [],

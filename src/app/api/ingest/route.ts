@@ -457,26 +457,50 @@ const extractedMemories = await extractMemories(
 );
 
 for (const extracted of extractedMemories) {
-  const { error: extractedMemoryError } = await admin
-    .from('memories')
-    .insert({
-      workspace_id: String(workspaceId),
-      document_id: document.id,
-      title: extracted.title,
-      content: extracted.content,
-      source_type: 'upload',
-      category,
-      memory_type: extracted.memory_type,
-      confidence: extracted.confidence,
-      occurred_at: extracted.occurred_at,
-      metadata: extracted.metadata,
-      parent_memory_id: memory.id,
-    });
+  const { data: extractedMemory, error: extractedMemoryError } =
+    await admin
+      .from('memories')
+      .insert({
+        workspace_id: String(workspaceId),
+        document_id: document.id,
+        title: extracted.title,
+        content: extracted.content,
+        source_type: 'upload',
+        category,
+        memory_type: extracted.memory_type,
+        confidence: extracted.confidence,
+        occurred_at: extracted.occurred_at,
+        metadata: extracted.metadata,
+        parent_memory_id: memory.id,
+      })
+      .select('id')
+      .single();
 
   if (extractedMemoryError) {
     throw new Error(
       `Could not save extracted memory: ${extractedMemoryError.message}`
     );
+  }
+
+  if (
+    extractedMemory &&
+    extracted.relationship_type
+  ) {
+    const { error: relationshipError } = await admin
+      .from('memory_relationships')
+      .insert({
+        workspace_id: String(workspaceId),
+        source_memory_id: extractedMemory.id,
+        target_memory_id: memory.id,
+        relationship_type: extracted.relationship_type,
+        confidence: extracted.confidence,
+      });
+
+    if (relationshipError) {
+      throw new Error(
+        `Could not save memory relationship: ${relationshipError.message}`
+      );
+    }
   }
 }
     // ---------------------------------------------------------
