@@ -26,6 +26,15 @@ import {
   Link as LinkIcon,
 } from 'lucide-react';
 
+interface MemoryRelationship {
+  id: string;
+  target_memory_id?: string;
+  source_memory_id?: string;
+  relationship_type: string;
+  confidence: number;
+  created_at: string;
+}
+
 interface MemoryItem {
   id: string;
   documentId?: string;
@@ -39,6 +48,8 @@ interface MemoryItem {
   content?: string;
   chunksCount?: number;
   error_message?: string;
+  outgoing_relationships?: MemoryRelationship[];
+  incoming_relationships?: MemoryRelationship[];
 }
 
 interface StagingFile {
@@ -1688,6 +1699,92 @@ formData.append('category', uploadCategory);
                 </div>
               </div>
             )}
+            {(() => {
+  const relationships = [
+    ...(selectedMemory.outgoing_relationships ?? []).map(
+      (relationship) => ({
+        ...relationship,
+        direction: 'outgoing' as const,
+        relatedMemoryId: relationship.target_memory_id,
+      })
+    ),
+    ...(selectedMemory.incoming_relationships ?? []).map(
+      (relationship) => ({
+        ...relationship,
+        direction: 'incoming' as const,
+        relatedMemoryId: relationship.source_memory_id,
+      })
+    ),
+  ];
+
+  const relatedMemories = relationships
+    .map((relationship) => ({
+      ...relationship,
+      memory: memories.find(
+        (memory) =>
+          memory.id === relationship.relatedMemoryId
+      ),
+    }))
+    .filter(
+      (
+        relationship
+      ): relationship is typeof relationship & {
+        memory: MemoryItem;
+      } => Boolean(relationship.memory)
+    );
+
+  if (!relatedMemories.length) {
+    return null;
+  }
+
+  return (
+    <div>
+      <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-white/25">
+        Related memories
+      </div>
+
+      <div className="space-y-2">
+        {relatedMemories.map((relationship) => (
+          <button
+            key={relationship.id}
+            type="button"
+            onClick={() => {
+              setSelectedMemory(relationship.memory);
+            }}
+            className="w-full rounded-xl border border-white/[0.07] bg-white/[0.025] p-3 text-left transition hover:bg-white/[0.05]"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-xs font-medium text-white/75">
+                  {relationship.memory.title}
+                </div>
+
+                <div className="mt-1 text-[11px] text-white/35">
+                  {relationship.direction === 'outgoing'
+                    ? relationship.relationship_type.replace(
+                        /_/g,
+                        ' '
+                      )
+                    : `related via ${relationship.relationship_type.replace(
+                        /_/g,
+                        ' '
+                      )}`}
+                </div>
+              </div>
+
+              <div className="shrink-0 text-[10px] text-white/20">
+                {Math.round(
+                  relationship.confidence * 100
+                )}
+                %
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+})()}
 
             <div>
               <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-white/25">
