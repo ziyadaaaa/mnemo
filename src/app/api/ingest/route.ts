@@ -3,6 +3,7 @@ import OpenAI from 'openai';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
+import { extractMemories } from '@/lib/memory-extractor';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -446,6 +447,38 @@ const filePath =
       }
     }
 
+   // ---------------------------------------------------------
+// EXTRACT STRUCTURED MEMORIES
+// ---------------------------------------------------------
+
+const extractedMemories = await extractMemories(
+  content,
+  title
+);
+
+for (const extracted of extractedMemories) {
+  const { error: extractedMemoryError } = await admin
+    .from('memories')
+    .insert({
+      workspace_id: String(workspaceId),
+      document_id: document.id,
+      title: extracted.title,
+      content: extracted.content,
+      source_type: 'upload',
+      category,
+      memory_type: extracted.memory_type,
+      confidence: extracted.confidence,
+      occurred_at: extracted.occurred_at,
+      metadata: extracted.metadata,
+      parent_memory_id: memory.id,
+    });
+
+  if (extractedMemoryError) {
+    throw new Error(
+      `Could not save extracted memory: ${extractedMemoryError.message}`
+    );
+  }
+}
     // ---------------------------------------------------------
     // MARK DOCUMENT AS READY
     // ---------------------------------------------------------
