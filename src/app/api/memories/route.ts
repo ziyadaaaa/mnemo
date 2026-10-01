@@ -93,10 +93,26 @@ export async function GET() {
     // Only retrieve memories belonging to the authenticated
     // user's actual workspace.
     const { data, error } = await admin
-      .from('memories')
-      .select('*')
-      .eq('workspace_id', workspaceId)
-      .order('created_at', { ascending: false });
+  .from('memories')
+  .select(`
+    *,
+    outgoing_relationships:memory_relationships!source_memory_id(
+      id,
+      target_memory_id,
+      relationship_type,
+      confidence,
+      created_at
+    ),
+    incoming_relationships:memory_relationships!target_memory_id(
+      id,
+      source_memory_id,
+      relationship_type,
+      confidence,
+      created_at
+    )
+  `)
+  .eq('workspace_id', workspaceId)
+  .order('created_at', { ascending: false });
 
     if (error) {
       console.error(
