@@ -380,13 +380,15 @@ const filePath =
       error: memoryError,
     } = await admin
       .from('memories')
-     .insert({
+.insert({
   workspace_id: String(workspaceId),
   document_id: document.id,
   title,
   content,
   source_type: 'upload',
   category,
+  memory_type: 'knowledge',
+  confidence: 1.0,
   embedding: documentEmbedding,
 })
       .select('id, title')
