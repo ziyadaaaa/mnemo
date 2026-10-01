@@ -69,7 +69,7 @@ export async function POST(req: Request) {
         {
           query_embedding: queryEmbedding,
           match_threshold: 0.25,
-          match_count: 8,
+          match_count: 5,
           workspace_filter: workspaceId,
         }
       );
@@ -89,15 +89,23 @@ export async function POST(req: Request) {
       );
     }
 
-    const contextChunks = matches || [];
+   const contextChunks = Array.from(
+  new Map(
+    (matches || []).map((match: any) => [
+      match.document_id,
+      match,
+    ])
+  ).values()
+);
 
-    const contextText = contextChunks
-      .map(
-        (match: any) =>
-          `Source: ${match.title || 'Untitled document'}\n` +
-          `Category: ${match.category || 'General'}\n` +
-          `Content:\n${match.content || ''}`
-      )
+   const contextText = contextChunks
+  .map(
+    (match: any) =>
+      `Source ID: ${match.id}\n` +
+      `Source: ${match.title || 'Untitled document'}\n` +
+      `Category: ${match.category || 'General'}\n` +
+      `Content:\n${match.content || ''}`
+  )
       .join('\n\n---\n\n');
 
     const systemPrompt = `
@@ -112,57 +120,118 @@ IMPORTANT RULES:
 4. When useful, mention the source document name.
 5. Give a direct, useful answer rather than dumping the entire context.
 6. Treat the provided company documents as the source of truth for this workspace.
+7. Only rely on sources that directly support the answer.
+8. Do not mention or cite unrelated documents.
 
 COMPANY KNOWLEDGE:
 ${contextText || 'No matching company knowledge was found.'}
+
+SOURCE SELECTION:
+The answer should be supported by the smallest set of sources necessary.
+Do not cite sources merely because they are related to the company or topic.
 `;
 
     const completion =
-      await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: systemPrompt,
-          },
-          {
-            role: 'user',
-            content: query,
-          },
-        ],
-        temperature: 0.1,
-      });
+  await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [
+      {
+        role: 'system',
+        content: `
+${systemPrompt}
 
-    const answer =
-      completion.choices[0]?.message?.content ||
-      'I could not generate an answer from the available company memory.';
+SOURCE ID RULE:
+Each source in the company knowledge has a source identifier.
+When answering, return the identifiers of ONLY the sources that directly support your answer.
 
-    const citations = contextChunks.map(
-      (match: any) => ({
-        id:
-          match.id ||
-          Math.random().toString(),
-        title:
-          match.title ||
-          'Untitled Source',
-        type:
-          match.category ||
-          'Document',
-        source:
-          match.source_type ||
-          'Company Memory',
-        snippet:
-          match.content
-            ? match.content.length > 180
-              ? `${match.content.substring(0, 180)}...`
-              : match.content
-            : '',
-        similarity:
-          typeof match.similarity === 'number'
-            ? match.similarity
-            : null,
-      })
-    );
+Return JSON with exactly this structure:
+{
+  "answer": "your concise answer",
+  "source_ids": ["source-id-1", "source-id-2"]
+}
+
+If no source directly supports the answer, return:
+{
+  "answer": "I could not find enough information in the company's memory.",
+  "source_ids": []
+}
+`,
+      },
+      {
+        role: 'user',
+        content: query,
+      },
+    ],
+    temperature: 0.1,
+    response_format: {
+      type: 'json_object',
+    },
+  });
+
+const rawResponse =
+  completion.choices[0]?.message?.content || '{}';
+
+let parsedResponse: {
+  answer?: string;
+  source_ids?: string[];
+};
+
+try {
+  parsedResponse = JSON.parse(rawResponse);
+} catch {
+  parsedResponse = {
+    answer:
+      'I could not generate an answer from the available company memory.',
+    source_ids: [],
+  };
+}
+
+const answer =
+  parsedResponse.answer ||
+  'I could not generate an answer from the available company memory.';
+
+const selectedSourceIds = new Set(
+  Array.isArray(parsedResponse.source_ids)
+    ? parsedResponse.source_ids.map(String)
+    : []
+);
+const selectedSourceTitles = new Set(
+  Array.isArray(parsedResponse.source_ids)
+    ? parsedResponse.source_ids.map(String)
+    : []
+);
+
+   const citations = contextChunks
+  .filter((match: any) =>
+  selectedSourceIds.has(String(match.id)) ||
+  selectedSourceTitles.has(String(match.title))
+)
+  .map(
+    (match: any) => ({
+      id:
+        match.id ||
+        Math.random().toString(),
+      title:
+  match.title ||
+  'Untitled Source',
+      type:
+        match.category ||
+        'Document',
+      source:
+        match.source_type ||
+        'Company Memory',
+      snippet:
+        match.content
+          ? match.content.length > 180
+            ? `${match.content.substring(0, 180)}...`
+            : match.content
+          : '',
+      similarity:
+        typeof match.similarity === 'number'
+          ? match.similarity
+          : null,
+    })
+  );
 
     return NextResponse.json({
       answer,
