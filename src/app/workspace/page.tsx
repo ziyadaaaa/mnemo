@@ -154,6 +154,8 @@ function normalizeMemory(item: any): MemoryItem {
     content: item?.content,
     chunksCount: item?.chunksCount,
     error_message: item?.error_message,
+    outgoing_relationships: item?.outgoing_relationships ?? [],
+incoming_relationships: item?.incoming_relationships ?? [],
   };
 }
 
