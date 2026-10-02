@@ -722,7 +722,7 @@ formData.append('category', uploadCategory);
 
       <div className="flex min-h-screen">
         {/* Sidebar */}
-        <aside className="hidden w-[250px] shrink-0 border-r border-white/[0.07] bg-[#090909] lg:flex lg:flex-col">
+     <aside className="w-full shrink-0 border-b border-white/[0.07] bg-[#090909] lg:w-[250px] lg:border-b-0 lg:border-r lg:flex lg:flex-col">
           <div className="flex h-20 items-center border-b border-white/[0.07] px-6">
             <div>
               <div className="text-xl font-semibold tracking-[-0.04em]">
@@ -750,10 +750,10 @@ formData.append('category', uploadCategory);
             </div>
           </div>
 
-          <nav className="flex-1 px-3 py-5">
-            <div className="mb-2 px-3 text-[10px] font-medium uppercase tracking-[0.18em] text-white/25">
-              Workspace
-            </div>
+        <nav className="flex flex-1 gap-1 overflow-x-auto px-3 py-3 lg:block lg:overflow-visible lg:px-3 lg:py-5">
+            <div className="mb-2 hidden px-3 text-[10px] font-medium uppercase tracking-[0.18em] text-white/25 lg:block">
+  Workspace
+</div>
 
             <SidebarButton
               active={activeSection === 'overview'}
@@ -787,24 +787,15 @@ formData.append('category', uploadCategory);
 />
 
             <SidebarButton
-              active={activeSection === 'chat'}
-              icon={<MessageSquare className="h-4 w-4" />}
-              label="Ask Mnemo"
-              onClick={() => {
-                window.location.href = '/chat';
-              }}
-            />
-
-            <SidebarButton
               active={activeSection === 'activity'}
               icon={<Activity className="h-4 w-4" />}
               label="Activity"
               onClick={() => navigate('activity')}
             />
 
-            <div className="mb-2 mt-7 px-3 text-[10px] font-medium uppercase tracking-[0.18em] text-white/25">
-              Manage
-            </div>
+            <div className="mb-2 mt-7 hidden px-3 text-[10px] font-medium uppercase tracking-[0.18em] text-white/25 lg:block">
+  Manage
+</div>
 
             <SidebarButton
               active={activeSection === 'members'}
@@ -855,160 +846,16 @@ formData.append('category', uploadCategory);
         </aside>
 
         {/* Main */}
-        <main className="min-w-0 flex-1">
+       <main className="min-w-0 flex-1 overflow-x-hidden">
           {/* Top bar */}
-          <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-white/[0.07] bg-[#070707]/90 px-5 backdrop-blur-xl sm:px-8">
+          <header className="sticky top-0 z-30 flex min-h-20 items-center justify-between gap-3 border-b border-white/[0.07] bg-[#070707]/90 px-4 py-3 backdrop-blur-xl sm:h-20 sm:px-8 sm:py-0">
+
             <div>
               <div className="text-sm font-medium text-white/90">
                 {activeSection === 'overview' && 'Overview'}
                 {activeSection === 'memory' && 'Company Memory'}
                 {activeSection === 'changes' && 'What Changed'}
                 {activeSection === 'chat' && 'Ask Mnemo'}
-                {/* What Changed */}
-{activeSection === 'changes' && (
-  <section>
-    <div className="mb-8">
-      <div className="mb-2 text-xs uppercase tracking-[0.2em] text-white/25">
-        Company intelligence
-      </div>
-
-      <h1 className="text-3xl font-semibold tracking-[-0.04em]">
-        What Changed
-      </h1>
-
-      <p className="mt-2 max-w-2xl text-sm leading-6 text-white/40">
-        Important changes Mnemo has detected across your company&apos;s
-        plans, decisions, priorities, and operations.
-      </p>
-    </div>
-
-    {loadingChanges ? (
-      <div className="max-w-3xl rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6">
-        <div className="flex items-center gap-3 text-sm text-white/40">
-          <RefreshCw className="h-4 w-4 animate-spin" />
-          Looking for recent changes...
-        </div>
-      </div>
-    ) : changes.length === 0 ? (
-      <div className="max-w-3xl rounded-2xl border border-white/[0.07] bg-white/[0.02] p-10 text-center">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.03]">
-          <RefreshCw className="h-5 w-5 text-white/30" />
-        </div>
-
-        <h2 className="mt-5 text-sm font-medium text-white/80">
-          No changes detected yet
-        </h2>
-
-        <p className="mx-auto mt-2 max-w-md text-xs leading-5 text-white/30">
-          As Mnemo processes your company documents, important changes
-          will appear here automatically.
-        </p>
-      </div>
-    ) : (
-      <div className="max-w-4xl space-y-4">
-        {changes.map((change) => (
-          <div
-            key={change.id}
-            className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5 transition hover:bg-white/[0.035]"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-amber-400/10">
-                    <RefreshCw className="h-4 w-4 text-amber-300/70" />
-                  </div>
-
-                  <div>
-                    <h2 className="text-sm font-medium text-white/90">
-                      {change.title}
-                    </h2>
-
-                    <div className="mt-1 text-[10px] uppercase tracking-[0.14em] text-white/25">
-                      {change.category || 'General'}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {change.confidence != null && (
-                <div className="shrink-0 rounded-full border border-white/[0.07] px-2.5 py-1 text-[10px] text-white/30">
-                  {Math.round(change.confidence * 100)}% confidence
-                </div>
-              )}
-            </div>
-
-            <div className="mt-5 rounded-xl border border-white/[0.06] bg-black/20 p-4">
-              <p className="text-sm leading-6 text-white/55">
-                {change.content}
-              </p>
-            </div>
-
-            {(change.previous_value ||
-              change.new_value ||
-              change.reason) && (
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {change.previous_value && (
-                  <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-3">
-                    <div className="text-[10px] uppercase tracking-[0.15em] text-white/25">
-                      Before
-                    </div>
-
-                    <div className="mt-2 text-xs leading-5 text-white/50">
-                      {change.previous_value}
-                    </div>
-                  </div>
-                )}
-
-                {change.new_value && (
-                  <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-3">
-                    <div className="text-[10px] uppercase tracking-[0.15em] text-white/25">
-                      After
-                    </div>
-
-                    <div className="mt-2 text-xs leading-5 text-white/60">
-                      {change.new_value}
-                    </div>
-                  </div>
-                )}
-
-                {change.reason && (
-                  <div className="sm:col-span-2 rounded-xl border border-white/[0.06] bg-white/[0.015] p-3">
-                    <div className="text-[10px] uppercase tracking-[0.15em] text-white/25">
-                      Why
-                    </div>
-
-                    <div className="mt-2 text-xs leading-5 text-white/50">
-                      {change.reason}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] text-white/25">
-              {change.occurred_at && (
-                <span>
-                  {new Date(change.occurred_at).toLocaleDateString(
-                    undefined,
-                    {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                    }
-                  )}
-                </span>
-              )}
-
-              <span>
-                Detected by Mnemo
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-    )}
-  </section>
-)}
                 {activeSection === 'activity' && 'Activity'}
                 {activeSection === 'members' && 'Members'}
                 {activeSection === 'connections' && 'Connections'}
@@ -1020,7 +867,7 @@ formData.append('category', uploadCategory);
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+<div className="flex shrink-0 items-center gap-2">
               <button
                 onClick={() => fetchMemories(true)}
                 disabled={refreshing}
@@ -1039,7 +886,7 @@ formData.append('category', uploadCategory);
                   resetAddModal();
                   setShowAddModal(true);
                 }}
-                className="flex h-9 items-center gap-2 rounded-xl bg-white px-3.5 text-xs font-semibold text-black transition hover:bg-white/90"
+                className="flex h-9 items-center gap-2 rounded-xl bg-white px-3 sm:px-3.5 text-xs font-semibold text-black transition hover:bg-white/90"
               >
                 <Plus className="h-3.5 w-3.5" />
                 Add memory
@@ -1047,7 +894,7 @@ formData.append('category', uploadCategory);
             </div>
           </header>
 
-          <div className="mx-auto max-w-[1400px] px-5 py-8 sm:px-8 lg:px-10">
+         <div className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-8 sm:py-8 lg:px-10">
             {/* Overview */}
             {activeSection === 'overview' && (
               <section>
@@ -1191,7 +1038,7 @@ formData.append('category', uploadCategory);
                       Knowledge base
                     </div>
 
-                    <h1 className="text-3xl font-semibold tracking-[-0.04em]">
+                    <h1 className="text-2xl font-semibold tracking-[-0.04em]">
                       Company Memory
                     </h1>
 
@@ -1214,8 +1061,8 @@ formData.append('category', uploadCategory);
                 </div>
 
                 <div className="mb-5 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-3">
-                  <div className="flex flex-col gap-3 xl:flex-row">
-                    <div className="relative flex-1">
+                  <div className="flex min-w-0 flex-col gap-3 xl:flex-row">
+                   <div className="relative min-w-0 flex-1">
                       <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/25" />
 
                       <input
@@ -2120,7 +1967,7 @@ function SidebarButton({
   return (
     <button
       onClick={onClick}
-      className={`mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition ${
+     className={`mb-1 flex w-auto shrink-0 items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition lg:w-full ${
         active
           ? 'bg-white/[0.07] text-white'
           : 'text-white/40 hover:bg-white/[0.035] hover:text-white/75'
@@ -2189,7 +2036,7 @@ function MemoryRow({
   return (
     <button
       onClick={onClick}
-      className="flex w-full items-center gap-4 px-5 py-4 text-left transition hover:bg-white/[0.025]"
+    className="flex w-full items-center gap-3 px-3 py-4 text-left transition hover:bg-white/[0.025] sm:gap-4 sm:px-5"
     >
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.025]">
         <FileText className="h-4 w-4 text-white/35" />
@@ -2224,7 +2071,7 @@ function MemoryTableRow({
   return (
     <button
       onClick={onClick}
-      className="grid w-full grid-cols-1 gap-3 border-b border-white/[0.06] px-5 py-4 text-left transition hover:bg-white/[0.025] md:grid-cols-[minmax(0,2fr)_120px_140px_120px_100px] md:items-center md:gap-4"
+      className="grid w-full grid-cols-1 gap-3 border-b border-white/[0.06] px-3 py-4 text-left transition hover:bg-white/[0.025] md:grid-cols-[minmax(0,2fr)_120px_140px_120px_100px] md:items-center md:gap-4"
     >
       <div className="flex min-w-0 items-center gap-3">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.025]">
@@ -2503,14 +2350,15 @@ function Modal({
   small?: boolean;
 }) {
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/75 p-3 backdrop-blur-sm">
       <div
-        className={`max-h-[90vh] w-full overflow-y-auto rounded-3xl border border-white/[0.09] bg-[#0d0d0d] shadow-2xl ${
-          small ? 'max-w-md' : 'max-w-2xl'
-        }`}
-      >
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/[0.07] bg-[#0d0d0d]/95 px-5 py-4 backdrop-blur-xl">
-          <h2 className="truncate pr-5 text-sm font-medium text-white/90">
+  className={`max-h-[92vh] w-full overflow-y-auto rounded-3xl border border-white/[0.09] bg-[#0d0d0d] shadow-2xl ${
+    small ? 'max-w-md' : 'max-w-2xl'
+  }`}
+>
+
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/[0.07] bg-[#0d0d0d]/95 px-4 py-4 backdrop-blur-xl">
+         <h2 className="truncate pr-3 text-sm font-medium text-white/90">
             {title}
           </h2>
 
@@ -2524,7 +2372,7 @@ function Modal({
           </button>
         </div>
 
-        <div className="p-5 sm:p-6">
+        <div className="p-4 sm:p-6">
           {children}
         </div>
       </div>
