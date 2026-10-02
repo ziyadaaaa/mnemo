@@ -722,8 +722,8 @@ formData.append('category', uploadCategory);
 
       <div className="flex min-h-screen">
         {/* Sidebar */}
-     <aside className="w-full shrink-0 border-b border-white/[0.07] bg-[#090909] lg:w-[250px] lg:border-b-0 lg:border-r lg:flex lg:flex-col">
-          <div className="flex h-20 items-center border-b border-white/[0.07] px-6">
+    <aside className="w-full shrink-0 border-b border-white/[0.07] bg-[#090909] lg:w-[250px] lg:border-b-0 lg:border-r lg:flex lg:flex-col">
+         <div className="flex h-16 items-center border-b border-white/[0.07] px-4 sm:h-20 sm:px-6">
             <div>
               <div className="text-xl font-semibold tracking-[-0.04em]">
                 mnemo
@@ -734,7 +734,7 @@ formData.append('category', uploadCategory);
             </div>
           </div>
 
-          <div className="border-b border-white/[0.07] px-4 py-4">
+        <div className="border-b border-white/[0.07] px-3 py-3 sm:px-4 sm:py-4">
             <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] px-3 py-3">
               <div className="mb-1 text-[10px] uppercase tracking-[0.18em] text-white/30">
                 Workspace
@@ -750,7 +750,7 @@ formData.append('category', uploadCategory);
             </div>
           </div>
 
-        <nav className="flex flex-1 gap-1 overflow-x-auto px-3 py-3 lg:block lg:overflow-visible lg:px-3 lg:py-5">
+      <nav className="flex flex-1 flex-col gap-1 overflow-x-hidden px-2 py-2 lg:block lg:overflow-visible lg:px-3 lg:py-5">
             <div className="mb-2 hidden px-3 text-[10px] font-medium uppercase tracking-[0.18em] text-white/25 lg:block">
   Workspace
 </div>
@@ -819,7 +819,7 @@ formData.append('category', uploadCategory);
             />
           </nav>
 
-          <div className="border-t border-white/[0.07] p-3">
+         <div className="border-t border-white/[0.07] p-2 sm:p-3">
             <div className="mb-2 flex items-center gap-2 rounded-xl bg-emerald-500/[0.06] px-3 py-2.5">
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10">
                 <Shield className="h-3.5 w-3.5 text-emerald-400" />
@@ -848,10 +848,11 @@ formData.append('category', uploadCategory);
         {/* Main */}
        <main className="min-w-0 flex-1 overflow-x-hidden">
           {/* Top bar */}
-          <header className="sticky top-0 z-30 flex min-h-20 items-center justify-between gap-3 border-b border-white/[0.07] bg-[#070707]/90 px-4 py-3 backdrop-blur-xl sm:h-20 sm:px-8 sm:py-0">
+         <header className="sticky top-0 z-30 flex min-h-16 items-center justify-between gap-2 border-b border-white/[0.07] bg-[#070707]/90 px-3 py-2 backdrop-blur-xl sm:h-20 sm:px-8 sm:py-0">
 
             <div>
-              <div className="text-sm font-medium text-white/90">
+              <div className="min-w-0">
+  <div className="truncate text-sm font-medium text-white/90">
                 {activeSection === 'overview' && 'Overview'}
                 {activeSection === 'memory' && 'Company Memory'}
                 {activeSection === 'changes' && 'What Changed'}
@@ -865,9 +866,11 @@ formData.append('category', uploadCategory);
               <div className="mt-0.5 hidden text-xs text-white/30 sm:block">
                 {workspaceName}
               </div>
+             </div>
             </div>
 
-<div className="flex shrink-0 items-center gap-2">
+
+<div className="flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-2">
               <button
                 onClick={() => fetchMemories(true)}
                 disabled={refreshing}
@@ -881,12 +884,12 @@ formData.append('category', uploadCategory);
                 <span className="hidden sm:block">Refresh</span>
               </button>
 
-              <button
+                         <button
                 onClick={() => {
                   resetAddModal();
                   setShowAddModal(true);
                 }}
-                className="flex h-9 items-center gap-2 rounded-xl bg-white px-3 sm:px-3.5 text-xs font-semibold text-black transition hover:bg-white/90"
+                className="flex h-9 items-center gap-1.5 rounded-xl bg-white px-2.5 text-xs font-semibold text-black transition hover:bg-white/90 sm:gap-2 sm:px-3.5"
               >
                 <Plus className="h-3.5 w-3.5" />
                 Add memory
@@ -894,7 +897,7 @@ formData.append('category', uploadCategory);
             </div>
           </header>
 
-         <div className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-8 sm:py-8 lg:px-10">
+        <div className="mx-auto w-full max-w-[1400px] px-3 py-5 sm:px-8 sm:py-8 lg:px-10">
             {/* Overview */}
             {activeSection === 'overview' && (
               <section>
@@ -1967,7 +1970,7 @@ function SidebarButton({
   return (
     <button
       onClick={onClick}
-     className={`mb-1 flex w-auto shrink-0 items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition lg:w-full ${
+className={`mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm transition lg:w-full ${
         active
           ? 'bg-white/[0.07] text-white'
           : 'text-white/40 hover:bg-white/[0.035] hover:text-white/75'
