@@ -166,6 +166,8 @@ export default function WorkspacePage() {
   const [userEmail, setUserEmail] = useState('');
 
   const [memories, setMemories] = useState<MemoryItem[]>([]);
+  const [changes, setChanges] = useState<any[]>([]);
+const [loadingChanges, setLoadingChanges] = useState(true);
   const [loadingMemories, setLoadingMemories] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
    const [billing, setBilling] = useState<{
@@ -318,11 +320,40 @@ if (billingResponse.ok) {
       setRefreshing(false);
     }
   };
+  const fetchChanges = async () => {
+  try {
+    setLoadingChanges(true);
+
+    const response = await fetch('/api/changes', {
+      cache: 'no-store',
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data?.error || 'Could not load changes.'
+      );
+    }
+
+    setChanges(
+      Array.isArray(data?.data)
+        ? data.data
+        : []
+    );
+  } catch (error) {
+    console.error('FETCH CHANGES ERROR:', error);
+    setChanges([]);
+  } finally {
+    setLoadingChanges(false);
+  }
+};
 
   useEffect(() => {
-    fetchWorkspace();
-    fetchMemories();
-  }, []);
+  fetchWorkspace();
+  fetchMemories();
+  fetchChanges();
+}, []);
 
   const filteredMemories = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -731,13 +762,29 @@ formData.append('category', uploadCategory);
               onClick={() => navigate('overview')}
             />
 
-            <SidebarButton
-              active={activeSection === 'memory'}
-              icon={<Database className="h-4 w-4" />}
-              label="Memory"
-              badge={memories.length}
-              onClick={() => navigate('memory')}
-            />
+<SidebarButton
+  active={activeSection === 'memory'}
+  icon={<Database className="h-4 w-4" />}
+  label="Memory"
+  badge={memories.length}
+  onClick={() => navigate('memory')}
+/>
+
+<SidebarButton
+  active={activeSection === 'changes'}
+  icon={<RefreshCw className="h-4 w-4" />}
+  label="What Changed"
+  onClick={() => navigate('changes')}
+/>
+
+<SidebarButton
+  active={activeSection === 'chat'}
+  icon={<MessageSquare className="h-4 w-4" />}
+  label="Ask Mnemo"
+  onClick={() => {
+    window.location.href = '/chat';
+  }}
+/>
 
             <SidebarButton
               active={activeSection === 'chat'}
@@ -815,7 +862,153 @@ formData.append('category', uploadCategory);
               <div className="text-sm font-medium text-white/90">
                 {activeSection === 'overview' && 'Overview'}
                 {activeSection === 'memory' && 'Company Memory'}
+                {activeSection === 'changes' && 'What Changed'}
                 {activeSection === 'chat' && 'Ask Mnemo'}
+                {/* What Changed */}
+{activeSection === 'changes' && (
+  <section>
+    <div className="mb-8">
+      <div className="mb-2 text-xs uppercase tracking-[0.2em] text-white/25">
+        Company intelligence
+      </div>
+
+      <h1 className="text-3xl font-semibold tracking-[-0.04em]">
+        What Changed
+      </h1>
+
+      <p className="mt-2 max-w-2xl text-sm leading-6 text-white/40">
+        Important changes Mnemo has detected across your company&apos;s
+        plans, decisions, priorities, and operations.
+      </p>
+    </div>
+
+    {loadingChanges ? (
+      <div className="max-w-3xl rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6">
+        <div className="flex items-center gap-3 text-sm text-white/40">
+          <RefreshCw className="h-4 w-4 animate-spin" />
+          Looking for recent changes...
+        </div>
+      </div>
+    ) : changes.length === 0 ? (
+      <div className="max-w-3xl rounded-2xl border border-white/[0.07] bg-white/[0.02] p-10 text-center">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+          <RefreshCw className="h-5 w-5 text-white/30" />
+        </div>
+
+        <h2 className="mt-5 text-sm font-medium text-white/80">
+          No changes detected yet
+        </h2>
+
+        <p className="mx-auto mt-2 max-w-md text-xs leading-5 text-white/30">
+          As Mnemo processes your company documents, important changes
+          will appear here automatically.
+        </p>
+      </div>
+    ) : (
+      <div className="max-w-4xl space-y-4">
+        {changes.map((change) => (
+          <div
+            key={change.id}
+            className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5 transition hover:bg-white/[0.035]"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-amber-400/10">
+                    <RefreshCw className="h-4 w-4 text-amber-300/70" />
+                  </div>
+
+                  <div>
+                    <h2 className="text-sm font-medium text-white/90">
+                      {change.title}
+                    </h2>
+
+                    <div className="mt-1 text-[10px] uppercase tracking-[0.14em] text-white/25">
+                      {change.category || 'General'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {change.confidence != null && (
+                <div className="shrink-0 rounded-full border border-white/[0.07] px-2.5 py-1 text-[10px] text-white/30">
+                  {Math.round(change.confidence * 100)}% confidence
+                </div>
+              )}
+            </div>
+
+            <div className="mt-5 rounded-xl border border-white/[0.06] bg-black/20 p-4">
+              <p className="text-sm leading-6 text-white/55">
+                {change.content}
+              </p>
+            </div>
+
+            {(change.previous_value ||
+              change.new_value ||
+              change.reason) && (
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {change.previous_value && (
+                  <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-3">
+                    <div className="text-[10px] uppercase tracking-[0.15em] text-white/25">
+                      Before
+                    </div>
+
+                    <div className="mt-2 text-xs leading-5 text-white/50">
+                      {change.previous_value}
+                    </div>
+                  </div>
+                )}
+
+                {change.new_value && (
+                  <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-3">
+                    <div className="text-[10px] uppercase tracking-[0.15em] text-white/25">
+                      After
+                    </div>
+
+                    <div className="mt-2 text-xs leading-5 text-white/60">
+                      {change.new_value}
+                    </div>
+                  </div>
+                )}
+
+                {change.reason && (
+                  <div className="sm:col-span-2 rounded-xl border border-white/[0.06] bg-white/[0.015] p-3">
+                    <div className="text-[10px] uppercase tracking-[0.15em] text-white/25">
+                      Why
+                    </div>
+
+                    <div className="mt-2 text-xs leading-5 text-white/50">
+                      {change.reason}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] text-white/25">
+              {change.occurred_at && (
+                <span>
+                  {new Date(change.occurred_at).toLocaleDateString(
+                    undefined,
+                    {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    }
+                  )}
+                </span>
+              )}
+
+              <span>
+                Detected by Mnemo
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </section>
+)}
                 {activeSection === 'activity' && 'Activity'}
                 {activeSection === 'members' && 'Members'}
                 {activeSection === 'connections' && 'Connections'}
